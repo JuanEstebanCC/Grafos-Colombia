@@ -14,10 +14,12 @@ public class CiudadesRecorrido{
 
     public static void main(String[] args) {
         // Crear el grafo ponderado
-        Graph<String, DefaultWeightedEdge> graph = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
+        // Crear grafos ponderados para distancia y tiempo
+        Graph<String, DefaultWeightedEdge> graphDistance = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
+        Graph<String, DefaultWeightedEdge> graphTime = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
 
         // Cargar datos desde el archivo CSV
-        loadGraphFromCSV(graph);
+        loadGraphFromCSV(graphDistance, graphTime);
 
         // Menú de opciones
         Scanner scanner = new Scanner(System.in);
@@ -34,13 +36,13 @@ public class CiudadesRecorrido{
 
             switch (choice) {
                 case 1:
-                    checkConnection(graph, scanner);
+                    checkConnection(graphDistance, scanner);
                     break;
                 case 2:
-                    findShortestPath(graph, scanner, "Distancia");
+                    findAndPrintShortestPath(graphDistance, scanner, true);
                     break;
                 case 3:
-                    findShortestPath(graph, scanner, "Tiempo");
+                    findAndPrintShortestPath(graphTime, scanner, false);
                     break;
                 case 4:
                     System.out.println("Saliendo...");
@@ -51,29 +53,34 @@ public class CiudadesRecorrido{
 
         } while (choice != 4);
     }
-
-    private static void loadGraphFromCSV(Graph<String, DefaultWeightedEdge> graph) {
+    private static void loadGraphFromCSV(Graph<String, DefaultWeightedEdge> graphDistance, Graph<String, DefaultWeightedEdge> graphTime) {
+        // Ruta del archivo CSV
         String csvFile = "C:\\Users\\santi\\Desktop\\Grafos-ED\\Grafos-Unal\\Grafos-EDD\\src\\main\\java\\org\\example\\data.csv";
         String line;
 
         try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
             while ((line = br.readLine()) != null) {
+                // Separar la línea en datos: ciudadA, ciudadB, distancia, tiempo
                 String[] data = line.split(",");
-                String cityA = data[0];
-                String cityB = data[1];
+                String cityA = data[0].trim();
+                String cityB = data[1].trim();
                 double distance = Double.parseDouble(data[2]);
                 double time = Double.parseDouble(data[3]);
 
-                // Agregar ciudades como vértices al grafo
-                graph.addVertex(cityA);
-                graph.addVertex(cityB);
+                // Grafo de distancia
+                graphDistance.addVertex(cityA);
+                graphDistance.addVertex(cityB);
+                DefaultWeightedEdge distanceEdge = graphDistance.addEdge(cityA, cityB);
+                if (distanceEdge != null) {
+                    graphDistance.setEdgeWeight(distanceEdge, distance);
+                }
 
-                // Agregar arista con peso (distancia)
-                DefaultWeightedEdge edge = graph.addEdge(cityA, cityB);
-
-                if (edge != null) {
-                    // Verificar si la arista se agregó correctamente antes de establecer el peso
-                    graph.setEdgeWeight(edge, distance); // Utilizamos el peso de distancia
+                // Grafo de tiempo
+                graphTime.addVertex(cityA);
+                graphTime.addVertex(cityB);
+                DefaultWeightedEdge timeEdge = graphTime.addEdge(cityA, cityB);
+                if (timeEdge != null) {
+                    graphTime.setEdgeWeight(timeEdge, time);
                 }
             }
         } catch (IOException e) {
@@ -81,14 +88,20 @@ public class CiudadesRecorrido{
         }
     }
 
+
     private static void checkConnection(Graph<String, DefaultWeightedEdge> graph, Scanner scanner) {
+        // Solicitar el nombre de la primera ciudad al usuario
         System.out.print("Ingrese el nombre de la primera ciudad: ");
         String cityA = scanner.next();
+
+        // Solicitar el nombre de la segunda ciudad al usuario
         System.out.print("Ingrese el nombre de la segunda ciudad: ");
         String cityB = scanner.next();
 
+        // Verificar si existe una conexión directa entre las dos ciudades en el grafo
         boolean connected = graph.containsEdge(cityA, cityB) || graph.containsEdge(cityB, cityA);
 
+        // Informar al usuario sobre la conexión entre las ciudades
         if (connected) {
             System.out.println("Las ciudades están conectadas.");
         } else {
@@ -96,53 +109,63 @@ public class CiudadesRecorrido{
         }
     }
 
-    private static void findShortestPath(Graph<String, DefaultWeightedEdge> graph, Scanner scanner, String weightType) {
-        System.out.print("Ingrese el nombre de la ciudad de origen: ");
+    private static void findAndPrintShortestPath(Graph<String, DefaultWeightedEdge> graph, Scanner scanner, boolean isDistance) {
+        // Solicitar la ciudad de origen al usuario
+        System.out.print("Ingrese la ciudad de origen: ");
         String sourceCity = scanner.next();
-        System.out.print("Ingrese el nombre de la ciudad de destino: ");
+
+        // Solicitar la ciudad de destino al usuario
+        System.out.print("Ingrese la ciudad de destino: ");
         String targetCity = scanner.next();
 
-        // Verificar si las ciudades de origen y destino existen en el grafo
-        if (graph.containsVertex(sourceCity) && graph.containsVertex(targetCity)) {
-            // Utilizar el algoritmo de Dijkstra para encontrar el camino más corto en base a la distancia
-            DijkstraShortestPath<String, DefaultWeightedEdge> dijkstraDistance = new DijkstraShortestPath<>(graph);
-            List<DefaultWeightedEdge> shortestPathByDistance = findShortestPathByDistance(dijkstraDistance, graph, sourceCity, targetCity);
+        // Verificar si ambas ciudades existen en el grafo
+        if (!graph.containsVertex(sourceCity) || !graph.containsVertex(targetCity)) {
+            System.out.println("Al menos una de las ciudades no existe en el grafo.");
+            return;
+        }
 
-            // Verificar si el camino es nulo
-            if (shortestPathByDistance != null) {
-                System.out.println("Camino más corto en distancia:");
-                for (DefaultWeightedEdge edge : shortestPathByDistance) {
-                    System.out.println(graph.getEdgeSource(edge) + " -> " + graph.getEdgeTarget(edge));
-                }
-                System.out.println("Distancia total: " + dijkstraDistance.getPathWeight(sourceCity, targetCity));
-            } else {
-                System.out.println("No hay camino disponible en distancia entre las ciudades.");
+        // Inicializar el algoritmo de Dijkstra con el grafo proporcionado
+        DijkstraShortestPath<String, DefaultWeightedEdge> dijkstra = new DijkstraShortestPath<>(graph);
+
+        // Obtener el camino más corto según la métrica (distancia o tiempo)
+        List<DefaultWeightedEdge> shortestPath = (isDistance)
+                ? dijkstra.getPath(sourceCity, targetCity).getEdgeList()
+                : findShortestPathByTime(dijkstra, graph, sourceCity, targetCity);
+
+        // Obtener el peso total del camino más corto
+        double totalWeight = dijkstra.getPathWeight(sourceCity, targetCity);
+
+        // Determinar la métrica actual (distancia o tiempo)
+        String metric = (isDistance) ? "Distancia" : "Tiempo";
+
+        // Imprimir el resultado del camino más corto
+        if (shortestPath != null) {
+            System.out.println("Camino más corto en " + metric + ":");
+            for (DefaultWeightedEdge edge : shortestPath) {
+                // Obtener la ciudad de origen, ciudad de destino y peso de la arista
+                String edgeSource = graph.getEdgeSource(edge);
+                String edgeTarget = graph.getEdgeTarget(edge);
+                double edgeWeight = graph.getEdgeWeight(edge);
+
+                // Imprimir la arista y su peso
+                System.out.println(edgeSource + " -> " + edgeTarget + " (" + metric + ": " + edgeWeight + ")");
             }
-
-            // Utilizar el algoritmo de Dijkstra para encontrar el camino más corto en base al tiempo
-            DijkstraShortestPath<String, DefaultWeightedEdge> dijkstraTime = new DijkstraShortestPath<>(graph);
-            List<DefaultWeightedEdge> shortestPathByTime = dijkstraTime.getPath(sourceCity, targetCity).getEdgeList();
-
-            // Verificar si el camino es nulo
-            if (shortestPathByTime != null) {
-                System.out.println("\nCamino más corto en tiempo:");
-                for (DefaultWeightedEdge edge : shortestPathByTime) {
-                    System.out.println(graph.getEdgeSource(edge) + " -> " + graph.getEdgeTarget(edge));
-                }
-                System.out.println("Tiempo total: " + dijkstraTime.getPathWeight(sourceCity, targetCity));
-            } else {
-                System.out.println("No hay camino disponible en tiempo entre las ciudades.");
-            }
+            // Imprimir el peso total del camino más corto
+            System.out.println(metric + " total: " + totalWeight);
         } else {
-            System.out.println("Una de las ciudades no existe en el grafo.");
+            // Informar si no hay camino disponible entre las ciudades
+            System.out.println("No hay camino disponible en " + metric + " entre las ciudades.");
         }
     }
 
-    private static List<DefaultWeightedEdge> findShortestPathByDistance(
+    // Parámetros para realizar la búsqueda del camino más corto en tiempo utilizando el algoritmo de Dijkstra. La instancia de DijkstraShortestPath ya contiene información sobre el grafo y el
+    // cálculo del camino más corto se realiza desde sourceCity hacia targetCity. La función devuelve la lista de aristas que forman el camino más corto en términos de tiempo
+    private static List<DefaultWeightedEdge> findShortestPathByTime(
             DijkstraShortestPath<String, DefaultWeightedEdge> dijkstra,
             Graph<String, DefaultWeightedEdge> graph,
             String sourceCity,
             String targetCity) {
+        // Utiliza el algoritmo de Dijkstra para encontrar el camino más corto en tiempo
         return dijkstra.getPath(sourceCity, targetCity).getEdgeList();
     }
 }
