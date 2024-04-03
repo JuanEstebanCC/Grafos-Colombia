@@ -1,4 +1,4 @@
- [![Unal-Logo](https://w7.pngwing.com/pngs/513/945/png-transparent-national-university-of-colombia-at-palmira-national-university-of-colombia-at-manizales-free-university-of-colombia-icesi-university-university-of-los-andes-innovate-white-text-logo.png)]() 
+ [![Unal-Logo](https://logowik.com/content/uploads/images/escudo-de-la-universidad-nacional-de-colombia-20163327.logowik.com.webp)]() 
 
 # Grafos-Unal
 Create a graph with the colombian cities and his distances (Educational purpose)
