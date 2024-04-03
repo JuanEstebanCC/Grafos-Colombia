@@ -1,4 +1,4 @@
- [![Unal-Logo](https://logowik.com/content/uploads/images/escudo-de-la-universidad-nacional-de-colombia-20163327.logowik.com.webp)]() 
+ [![Unal-Logo](https://images.credly.com/images/d57ca793-0499-419a-a5a8-8a56699c6c6c/blob.png)]() 
 
 # Grafos-Unal
 Create a graph with the colombian cities and his distances (Educational purpose)
